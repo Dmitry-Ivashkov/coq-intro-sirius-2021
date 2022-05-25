@@ -39,12 +39,16 @@ Section IfProofs.
   Lemma if_true_helper {A: Type} (b: bool) (a1 a2: A) (TRUE: b = true):
     (if b then a1 else a2) = a1.
   Proof.
-Admitted.
+  rewrite TRUE.
+  reflexivity.
+  Qed.
 
   Lemma if_false_helper {A: Type} (b: bool) (a1 a2: A) (FALSE: b = false):
     (if b then a1 else a2) = a2.
   Proof.
-Admitted.
+  rewrite FALSE.
+  reflexivity.
+Qed.
 
 End IfProofs.
 
@@ -79,7 +83,15 @@ Section LogicProofs.
   Lemma bool_true_or_false (b: bool):
     b = true \/ b = false.
   Proof.
-Admitted.
+  destruct b.
+  { left. 
+  reflexivity.
+  }
+  right. 
+  reflexivity.
+Qed.
+(*  unfold or *)
+
   
   (* Show the equivalence of two notions of boolean being false. 
      An equivalence can be proven by showing two corresponding implications.
@@ -90,7 +102,33 @@ Admitted.
   Lemma false_is_not_true (b: bool):
     b = false <-> b <> true.
   Proof.
-Admitted.
+  unfold not.
+  unfold iff.
+  split.
+  {destruct b.
+    {
+    intros h1.
+    intros h2.
+    inversion h1.
+    }
+    {intros h1.
+    intros h2.
+    inversion h2.
+    }
+  }
+  {destruct b.
+    {
+    intros h1.
+    destruct h1.
+    reflexivity.
+    }
+    {
+    intros h1.
+    reflexivity.
+    }
+  }
+Qed.
+
   
 End LogicProofs.   
 
@@ -113,7 +151,10 @@ Section NatEqProofs.
   Lemma eq_implies_nat_eq (n1 n2: nat):
     n1 = n2 -> nat_eq n1 n2 = true.
   Proof.
-Admitted.
+  intros h1.
+  rewrite h1.
+  apply nat_eq_refl.
+Qed.
   
   (* This part of the specification, again, involves induction. *)
   Lemma nat_eq_implies_eq (n1 n2: nat):
@@ -130,7 +171,12 @@ Admitted.
   Lemma nat_eq_spec (n1 n2: nat):
     nat_eq n1 n2 = true <-> n1 = n2.
   Proof.
-Admitted.
+  unfold iff.
+  split.
+  {apply nat_eq_implies_eq. }
+  {apply eq_implies_nat_eq. }
+Qed.
+
 
   (* This is an obvious reformulation of 'nat_eq' specification.
      The specification, however, cannot be directly applied to prove this version.
@@ -146,8 +192,13 @@ Admitted.
   Lemma nat_eq_neg_spec (n1 n2: nat):
     nat_eq n1 n2 = false <-> n1 <> n2.
   Proof.
-Admitted.
 
+  apply (@iff_trans (nat_eq n1 n2 = false) (nat_eq n1 n2 <> true) (n1 <> n2)).
+  { apply false_is_not_true. }
+  { apply neg_equiv.
+  apply nat_eq_spec. }
+Qed.
+    
   (* After you've proved the statement above, read about the 'eapply' tactic.
      The usage of 'eapply' allows to avoid specifying 
      all the parameters of a lemma you've been applying.
@@ -165,14 +216,22 @@ Section UpdProofs.
   Lemma update_latest (f: nat -> V) (n: nat) (v: V):
     (upd f n v) n = v.
   Proof.
-Admitted.
+  unfold upd.
+  rewrite nat_eq_refl.
+  reflexivity.
+Qed.
+
 
   (* Prove that update affect only one value *)
   (* Use the helper lemma for 'if'.  *)
   Lemma update_others (f: nat -> V) (n: nat) (v: V) (n': nat) (NEQ: n <> n'):
-    (upd f n v) n' = f n'.
+    (upd f n v) n' = f n'.    
   Proof.
-Admitted.
+  unfold upd.
+  apply nat_eq_neg_spec in NEQ.
+  rewrite NEQ.
+  reflexivity.
+Qed.
 
 End UpdProofs. 
 
@@ -184,42 +243,108 @@ Section NatDictProofs.
   Lemma new_dict_empty (n: nat):
     contains' (@new_dict' V) n = false.
   Proof.
-Admitted.
+  unfold new_dict'.
+  unfold contains'.
+  unfold get'.
+  reflexivity.
+Qed.
 
   (* Prove that the inserted value gets retrieved *)
   Lemma insert_latest (d: @nat_dict_fun V) (n: nat) (v: V):
     get' (insert' d n v) n = Some v.
   Proof.
-Admitted.
+  unfold insert'.
+  unfold get'.
+  apply update_latest.
+Qed.
 
   (* Prove that removed key is no more contained in the dict *)
   Lemma removed_not_contained (d: @nat_dict_fun V) (n: nat):
     contains' (remove' d n) n = false.
   Proof.
-Admitted.
+  unfold remove'.
+  unfold contains'.
+  unfold get'.
+  rewrite update_latest.
+  reflexivity.
+Qed.
 
 
   (* Prove that insert doesn't affect other values *)
   Lemma insert_others (d: @nat_dict_fun V) (n: nat) (v: V) (n': nat) (NEQ: n <> n'):
     get' (insert' d n v) n' = get' d n'. 
   Proof.
-Admitted.
+  unfold insert'.
+  unfold get'.
+  apply update_others, NEQ.
+Qed.
 
   (* Prove that updating a dictionary with a value it already has yields the same dictionary *)
   (* You may want to prove an helper lemma beforehand. *)
   (* Also, remember that 'destruct' can be used not only on variables, 
      but also on an arbitrary term.
      It can be used to separate cases when insert does matter and doesn't. *)
+
+  Lemma n_eq_or_neq (n n': nat): (n=n')\/(n<>n').
+  Proof.
+  pattern n, n'.
+  apply (nat_double_ind).
+  {
+    intros n0.
+    destruct n0.
+    auto.
+    auto.
+  }
+  {
+    intros n0.
+    auto.
+  }
+  {
+    intros n0 m.
+    intros h.
+    destruct h.
+    auto.
+    auto.
+  }
+Qed.
+    
+
+  
+
+    
   Lemma insert_same (d: @nat_dict_fun V) (n: nat) (v: V)
         (HAD_V: get' d n = Some v):
     forall n', get' (insert' d n v) n' = get' d n'. 
   Proof.
-Admitted.
+  intros n'.
+  remember (n=n' \/ n<>n') as n_eq_n'.
+  
+  destruct (n_eq_or_neq n n').
+  {
+    rewrite H.
+  unfold insert'.
+  unfold get' in *.
+  unfold upd.
+  rewrite H in HAD_V.
+  rewrite HAD_V.
+  rewrite nat_eq_refl.
+  reflexivity.
+  }
+  unfold insert'.
+  unfold get'.
+  apply insert_others.
+  apply H.
+Qed.
+  
 
   (* Prove that inserting a value twice is the same as inserting it once *)
   Lemma insert_twice (d: @nat_dict_fun V) (n: nat) (v: V):
     forall n', get' (insert' (insert' d n v) n v) n' = get' (insert' d n v) n'. 
   Proof.
-Admitted.
+  remember (insert' d n v) as d'.
+  apply insert_same.
+  rewrite Heqd'.
+  apply insert_latest.
+Qed.
 
 End NatDictProofs. 
