@@ -13,8 +13,13 @@ Section NatEq.
 
   (* Implement a function that checks the equality of two natural numbers. 
      Use pattern matching and recursion. *)
-  Fixpoint nat_eq (x y: nat): bool
-  . Admitted.
+  Fixpoint nat_eq (x y: nat): bool :=
+    match (x,y) with
+    | (S x', S y') => nat_eq x' y'
+    | (O, O) => true
+    | (_, _) => false
+    end.
+  (*Admitted.*)
  (* Replace the previous line with ':= (your implementation) . ' *)
 
   (* We're not _proving_ that our implementations are correct yet,
@@ -61,8 +66,11 @@ Section Option.
       | T1 => X1
       | T2 => X2
       end' *)
-  Definition has_some {A: Type} (o: option A) : bool
-  . Admitted.
+  Definition has_some {A: Type} (o: option A) : bool :=
+    match o with
+    | (Some _) => true
+    | (Nona) => false
+    end.
  (* Replace the previous line with ':= (your implementation) . ' *)
     
   Let has_some_tests := forallb id
@@ -79,8 +87,13 @@ Section Option.
 
   (* Implement a function that compares two optional natural numbers. *)
   (* Reuse the nat_eq you've defined before *)
-  Definition option_nat_eq (o1 o2: option nat) : bool
-  . Admitted.
+  Definition option_nat_eq (o1 o2: option nat) : bool :=
+    match (o1,o2) with
+    | (Some n1, Some n2) => nat_eq n1 n2
+    | (None, None) => true
+    | (_, _) => false
+    end.
+
  (* Replace the previous line with ':= (your implementation) . ' *)
 
   Let option_nat_eq_tests := forallb id
@@ -101,8 +114,9 @@ Section FunUpd.
   (* Here we'll only concentrate on functions whose input type is nat, 
      but which are still polymorphic on the output type. *)
   (* Implement the function update using if-then-else expression and nat_eq. *)
-  Definition upd {V: Type} (f: nat -> V) (x: nat) (y: V): nat -> V
-  . Admitted.
+  Definition upd {V: Type} (f: nat -> V) (x: nat) (y: V): nat -> V :=
+      fun n : nat => if (nat_eq x n) then y else (f n).
+
  (* Replace the previous line with ':= (your implementation) . ' *)
   
   Let upd_tests := forallb id
@@ -111,7 +125,7 @@ Section FunUpd.
                              nat_eq ((upd (upd id 5 3) 5 7) 5) 7;
                              nat_eq ((upd id 5 3) 123) 123;
                              nat_eq ((upd (upd id 5 3) 7 10) 5) 3
-                           ]. 
+                           ].
 
   Let upd_tests_pass: upd_tests = true.
   Proof. tauto. Qed.
@@ -139,17 +153,17 @@ Section NatDict.
   
   (* Implement a function that creates an empty dictionary *)
   Definition new_dict' : nat_dict_fun
-  . Admitted.
+  := fun n : nat => None.
  (* Replace the previous line with ':= (your implementation) . ' *)
   
   (* Implement an insertion using the 'upd' construct. *)
-  Definition insert' (d: nat_dict_fun) (k: nat) (v: V) : nat_dict_fun
-  . Admitted.
+  Definition insert' (d: nat_dict_fun) (k: nat) (v: V) : nat_dict_fun := 
+    upd d k (Some v).
  (* Replace the previous line with ':= (your implementation) . ' *)
   
   (* Implement a deletion similarly. *)
-  Definition remove' (d: nat_dict_fun) (k: nat) : nat_dict_fun
-  . Admitted.
+  Definition remove' (d: nat_dict_fun) (k: nat) : nat_dict_fun 
+    := upd d k None.
  (* Replace the previous line with ':= (your implementation) . ' *)
   
   (* Implement a function that retrieves a value by key. *)
@@ -158,14 +172,16 @@ Section NatDict.
      but rather due to a common sense: 
      if a dictionary (with an arbitrary implementation) doesn't contain a value,
      a retrieval method should somehow reflect it. *)
-  Definition get' (d: nat_dict_fun) (k: nat) : option V
-  . Admitted.
+  Definition get' (d: nat_dict_fun) (k: nat) : option V := d k.
  (* Replace the previous line with ':= (your implementation) . ' *)
   
   (* Implement a function that checks the presence of a given key. *)
   (* You can either reuse existing dict methods or write an independent implementation. *)
-  Definition contains' (d: nat_dict_fun) (k: nat): bool
-  . Admitted.
+  Definition contains' (d: nat_dict_fun) (k: nat): bool :=
+   match (get' d k) with
+   | None => false
+   | Some _ => true
+   end.
  (* Replace the previous line with ':= (your implementation) . ' *)
   
 End NatDict.
@@ -206,7 +222,6 @@ End NatDictTests.
 
 Section NatDict'.
   Context {V: Type}.
-
   (* The other implementation of a dictionary is based on a list
      that stores pairs of keys and values. *)
   (* If there are multiple pairs with the same key, 
@@ -219,13 +234,14 @@ Section NatDict'.
      some of them should also be inductively defined. *)
   
   (* Implement a function that creates an empty dictionary. *)
-  Definition new_dict'' : nat_dict_list
-  . Admitted.
+  Definition new_dict'' : nat_dict_list := nil
+  .
  (* Replace the previous line with ':= (your implementation) . ' *)
   
   (* Implement the insertion *)
-  Definition insert'' (d: nat_dict_list) (k: nat) (v: V) : nat_dict_list
-  . Admitted.
+  Definition insert'' (d: nat_dict_list) (k: nat) (v: V) : nat_dict_list :=
+    cons (pair k v) d
+  .
  (* Replace the previous line with ':= (your implementation) . ' *)
   
   
@@ -234,18 +250,36 @@ Section NatDict'.
   (* You may find useful that a pattern to be matched can be complex: *)
   (*    '(k, v) :: d'     destructs the list into the head and tail (named d')
      and, additionally, destructs the head into the key 'k' and value 'v' *)  
-  Fixpoint remove'' (d: nat_dict_list) (k: nat) : nat_dict_list
-  . Admitted.
+  Fixpoint remove'' (d: nat_dict_list) (k: nat) : nat_dict_list :=
+  match d with
+  | nil => nil
+  | cons h t => 
+    if (nat_eq k (fst h))
+      then remove'' t k
+      else cons h (remove'' t k)
+  end
+  . 
  (* Replace the previous line with ':= (your implementation) . ' *)
 
   (* Implement the retrieval function. *)
-  Fixpoint get'' (d: nat_dict_list) (k: nat) : option V
-  . Admitted.
+  Fixpoint get'' (d: nat_dict_list) (k: nat) : option V :=
+  match d with
+  | nil => None
+  | cons h t => 
+    if (nat_eq k (fst h))
+      then Some (snd h)
+      else (get'' t k)
+  end
+  .
  (* Replace the previous line with ':= (your implementation) . ' *)
 
   (* Implement the check for key presence. *)
-  Fixpoint contains'' (d: nat_dict_list) (k: nat): bool
-  . Admitted.
+  Fixpoint contains'' (d: nat_dict_list) (k: nat): bool :=
+    match (get'' d k) with
+   | None => false
+   | Some _ => true
+   end
+  .
  (* Replace the previous line with ':= (your implementation) . ' *)
      
 End NatDict'.
@@ -298,7 +332,7 @@ Section DictGeneral.
     insert: forall {V: Type}, (D V) -> nat -> V -> (D V);
     remove: forall {V: Type}, (D V) -> nat -> (D V);
     get: forall {V: Type}, (D V) -> nat -> option V;
-    contains: forall {V: Type}, (D V) -> nat -> bool;
+    contains: forall {V: Type}, (D V) -> nat -> bool
   }.
 
   (* Now we can specify expected behavior on the level of this interface. *)
@@ -331,7 +365,7 @@ Section DictGeneral.
     insert := @insert';
     remove := @remove';
     get := @get';
-    contains := @contains';
+    contains := @contains'
   }.                       
                        
 
